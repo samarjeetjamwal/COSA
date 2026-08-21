@@ -357,6 +357,7 @@
                 <th class="num">Margin %</th>
                 <th class="num">Monthly volume</th>
                 <th class="num">Monthly contribution</th>
+                <th></th>
               </tr>
             </thead>
             <tbody id="productBody"></tbody>
@@ -365,10 +366,12 @@
                 <td colspan="10" style="padding-top:10px;">Plant total</td>
                 <td class="num mono" id="ptTotalVol" style="padding-top:10px;"></td>
                 <td class="num mono" id="ptTotalContrib" style="padding-top:10px;"></td>
+                <td></td>
               </tr>
             </tfoot>
           </table>
-          <div class="note"><b>Note &mdash;</b>&nbsp;all figures in KES, illustrative starting values. Overwrite with your plant's actual cost sheet to make this a live production tool.</div>
+          <button class="addrow-btn" id="prodAddRow">+ Add product line</button>
+          <div class="note"><b>Note &mdash;</b>&nbsp;all figures in KES, illustrative starting values. Overwrite with your plant's actual cost sheet to make this a live production tool. Product name and unit are editable too &mdash; add a new SKU, a co-pack line, or a seasonal product and it flows straight into the dashboard, variance, CVP and board report.</div>
         </div>
       </section>
 
@@ -643,6 +646,9 @@ function margin(p){ return p.price - unitCost(p); }
 function marginPct(p){ const pr=p.price||1; return (margin(p)/pr)*100; }
 function contribution(p){ return margin(p) * p.volume; }
 
+const SWATCH_POOL = ['#2F6B4F','#C98A2C','#8A5A2B','#3A6E8F','#B0392F','#5C8AA6','#6B2F3A','#4E7A3A','#9C6B1E','#2E5E6B','#7A3E2F','#5A3E7A'];
+let productSeq = 0;
+
 function renderProductTable(){
   const body = document.getElementById('productBody');
   body.innerHTML = '';
@@ -650,7 +656,10 @@ function renderProductTable(){
     const uc = unitCost(p), m = margin(p), mp = marginPct(p), c = contribution(p);
     const tr = document.createElement('tr');
     tr.innerHTML = `
-      <td class="rowname">${p.name}<span class="unit">${p.unit}</span></td>
+      <td class="rowname">
+        <input type="text" data-idx="${idx}" data-field="name" value="${p.name}" style="font-weight:600; margin-bottom:3px;">
+        <input type="text" class="unit" data-idx="${idx}" data-field="unit" value="${p.unit}" style="font-size:11px; padding:2px 6px;">
+      </td>
       <td class="num"><input type="number" step="0.1" data-idx="${idx}" data-field="rawMaterial" value="${p.rawMaterial}"></td>
       <td class="num"><input type="number" step="0.1" data-idx="${idx}" data-field="packaging" value="${p.packaging}"></td>
       <td class="num"><input type="number" step="0.1" data-idx="${idx}" data-field="labour" value="${p.labour}"></td>
@@ -662,6 +671,7 @@ function renderProductTable(){
       <td class="num mono">${mp.toFixed(1)}%</td>
       <td class="num"><input type="number" step="1000" data-idx="${idx}" data-field="volume" value="${p.volume}"></td>
       <td class="num mono" style="font-weight:600;">${fmt(c)}</td>
+      <td><button class="addrow-btn" data-del="${idx}" style="border-color:var(--red); color:var(--red);" ${products.length<=1?'disabled title="At least one product line is required"':''}>Remove</button></td>
     `;
     body.appendChild(tr);
   });
@@ -674,7 +684,34 @@ document.getElementById('productBody').addEventListener('input', e=>{
   const t = e.target;
   if(t.tagName!=='INPUT') return;
   const idx = +t.dataset.idx, field = t.dataset.field;
+  if(field==='name' || field==='unit'){
+    products[idx][field] = t.value;
+    // don't fully re-render on every keystroke of a text field (loses focus) — just sync dependent views
+    renderOverview();
+    populateCVPProductSelect();
+    return;
+  }
   products[idx][field] = parseFloat(t.value)||0;
+  renderProductTable();
+  renderOverview();
+  populateCVPProductSelect();
+});
+document.getElementById('productBody').addEventListener('click', e=>{
+  const b = e.target.closest('[data-del]');
+  if(!b || b.disabled) return;
+  products.splice(+b.dataset.del, 1);
+  renderProductTable();
+  renderOverview();
+  populateCVPProductSelect();
+});
+document.getElementById('prodAddRow').addEventListener('click', ()=>{
+  productSeq++;
+  const sw = SWATCH_POOL[(products.length+productSeq) % SWATCH_POOL.length];
+  products.push({
+    id:'custom'+productSeq, name:'New product line', unit:'unit',
+    sw, rawMaterial:10, packaging:5, labour:2, varOH:1.5, fixedOH:2,
+    price:30, volume:50000
+  });
   renderProductTable();
   renderOverview();
   populateCVPProductSelect();
