@@ -1,0 +1,1076 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Milkline &mdash; Cost Intelligence Suite</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.4/chart.umd.min.js"></script>
+<style>
+  :root{
+    --ink:#14201A;
+    --ink-soft:#2A3A31;
+    --cream:#F7F3E9;
+    --paper:#FFFFFF;
+    --green:#2F6B4F;
+    --green-deep:#1E4835;
+    --green-pale:#E4EEE7;
+    --amber:#C98A2C;
+    --amber-pale:#F7E9D2;
+    --blue:#3A6E8F;
+    --blue-pale:#E3EDF2;
+    --red:#B0392F;
+    --red-pale:#F6E1DE;
+    --line: rgba(20,32,26,0.14);
+    --line-soft: rgba(20,32,26,0.08);
+    --shadow: 0 1px 2px rgba(20,32,26,0.06), 0 8px 24px rgba(20,32,26,0.06);
+    --radius: 3px;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--cream);
+    color:var(--ink);
+    font-family:'Inter',sans-serif;
+    font-size:15px;
+    line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+  }
+  h1,h2,h3,.disp{font-family:'Space Grotesk',sans-serif;letter-spacing:-0.01em;}
+  .mono{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;}
+  a{color:inherit;}
+  button{font-family:inherit;cursor:pointer;}
+  input[type=number], input[type=text], select{
+    font-family:'IBM Plex Mono',monospace;
+    font-size:13.5px;
+    background:var(--paper);
+    border:1px solid var(--line);
+    border-radius:2px;
+    padding:5px 7px;
+    color:var(--ink);
+    width:100%;
+  }
+  input[type=number]:focus, input[type=text]:focus, select:focus{
+    outline:2px solid var(--green);
+    outline-offset:1px;
+    border-color:var(--green);
+  }
+  input[type=number]{text-align:right;}
+
+  /* ===== Shell layout ===== */
+  .shell{display:flex; min-height:100vh;}
+  .rail{
+    width:236px; flex:0 0 236px;
+    background:var(--ink);
+    color:var(--cream);
+    display:flex; flex-direction:column;
+    position:sticky; top:0; height:100vh;
+  }
+  .rail-brand{
+    padding:22px 20px 16px 20px;
+    border-bottom:1px solid rgba(247,243,233,0.12);
+  }
+  .rail-brand .mark{
+    display:flex; align-items:center; gap:9px; margin-bottom:3px;
+  }
+  .rail-brand .mark svg{flex:0 0 auto;}
+  .rail-brand .name{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:19px; color:var(--paper);}
+  .rail-brand .tag{font-size:11px; color:rgba(247,243,233,0.55); font-family:'IBM Plex Mono',monospace; letter-spacing:.03em; margin-top:6px;}
+  .rail-nav{padding:14px 10px; flex:1; overflow-y:auto;}
+  .rail-nav .grp-label{
+    font-family:'IBM Plex Mono',monospace; font-size:10px; letter-spacing:.12em; text-transform:uppercase;
+    color:rgba(247,243,233,0.4); padding:14px 10px 6px 10px;
+  }
+  .rail-nav .grp-label:first-child{padding-top:4px;}
+  .navbtn{
+    display:flex; align-items:center; gap:10px; width:100%; text-align:left;
+    background:none; border:none; color:rgba(247,243,233,0.78);
+    padding:9px 10px; border-radius:3px; font-size:13.5px; font-weight:500;
+    margin-bottom:1px; transition:background .12s ease, color .12s ease;
+  }
+  .navbtn .n{
+    font-family:'IBM Plex Mono',monospace; font-size:11px; color:rgba(247,243,233,0.4); width:16px;
+  }
+  .navbtn:hover{background:rgba(247,243,233,0.06); color:var(--paper);}
+  .navbtn.active{background:var(--green-deep); color:var(--paper);}
+  .navbtn.active .n{color:var(--amber);}
+  .rail-foot{
+    padding:14px 20px 18px 20px; border-top:1px solid rgba(247,243,233,0.12);
+    font-size:11px; color:rgba(247,243,233,0.42); font-family:'IBM Plex Mono',monospace; line-height:1.6;
+  }
+
+  .main{flex:1; min-width:0;}
+  .topbar{
+    display:flex; align-items:center; justify-content:space-between;
+    padding:16px 34px; border-bottom:1px solid var(--line);
+    background:var(--paper);
+    position:sticky; top:0; z-index:5;
+  }
+  .topbar .ttl h1{font-size:19px; margin:0 0 2px 0;}
+  .topbar .ttl p{margin:0; font-size:12.5px; color:var(--ink-soft);}
+  .topbar .actions{display:flex; gap:8px;}
+  .btn{
+    border:1px solid var(--line); background:var(--paper); color:var(--ink);
+    padding:8px 14px; border-radius:3px; font-size:13px; font-weight:600;
+    display:inline-flex; align-items:center; gap:6px;
+  }
+  .btn:hover{border-color:var(--green);}
+  .btn.primary{background:var(--green); border-color:var(--green); color:#fff;}
+  .btn.primary:hover{background:var(--green-deep);}
+
+  .panels{padding:28px 34px 60px 34px; max-width:1220px;}
+  .panel{display:none;}
+  .panel.active{display:block; animation:fade .25s ease;}
+  @keyframes fade{from{opacity:0; transform:translateY(4px);} to{opacity:1; transform:none;}}
+
+  .section-head{margin-bottom:16px;}
+  .section-head h2{font-size:20px; margin:0 0 4px 0;}
+  .section-head p{margin:0; color:var(--ink-soft); font-size:13.5px; max-width:74ch;}
+  .eyebrow{
+    font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.12em; text-transform:uppercase;
+    color:var(--green); margin-bottom:6px; display:block;
+  }
+
+  .card{
+    background:var(--paper); border:1px solid var(--line); border-radius:var(--radius);
+    box-shadow:var(--shadow); padding:20px 22px; margin-bottom:20px;
+  }
+  .card h3{font-size:14.5px; margin:0 0 14px 0; display:flex; align-items:center; gap:8px;}
+  .card h3 .dot{width:7px; height:7px; border-radius:50%; background:var(--green);}
+
+  .grid{display:grid; gap:20px;}
+  .grid.cols-2{grid-template-columns:1fr 1fr;}
+  .grid.cols-3{grid-template-columns:repeat(3,1fr);}
+  .grid.cols-4{grid-template-columns:repeat(4,1fr);}
+  @media (max-width: 980px){ .grid.cols-2, .grid.cols-3, .grid.cols-4{grid-template-columns:1fr;} }
+
+  /* KPI cards */
+  .kpi{
+    background:var(--paper); border:1px solid var(--line); border-left:3px solid var(--green);
+    border-radius:var(--radius); padding:16px 18px; box-shadow:var(--shadow);
+  }
+  .kpi .label{font-size:11px; text-transform:uppercase; letter-spacing:.08em; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace;}
+  .kpi .value{font-family:'Space Grotesk',sans-serif; font-size:26px; font-weight:700; margin-top:6px;}
+  .kpi .sub{font-size:12px; color:var(--ink-soft); margin-top:4px;}
+  .kpi.amber{border-left-color:var(--amber);}
+  .kpi.blue{border-left-color:var(--blue);}
+  .kpi.red{border-left-color:var(--red);}
+
+  /* Flow diagram (signature element) */
+  .flowcard{background:var(--ink); border-radius:6px; padding:26px 26px 20px 26px; margin-bottom:22px; color:var(--cream); overflow:hidden; position:relative;}
+  .flowcard .flowlabel{font-family:'IBM Plex Mono',monospace; font-size:10.5px; letter-spacing:.14em; text-transform:uppercase; color:var(--amber); margin-bottom:16px;}
+  .flow{display:flex; align-items:center; gap:0; flex-wrap:nowrap; overflow-x:auto; padding-bottom:6px;}
+  .flow-node{
+    flex:0 0 auto; background:rgba(247,243,233,0.06); border:1px solid rgba(247,243,233,0.16);
+    border-radius:4px; padding:10px 14px; min-width:118px; text-align:center;
+  }
+  .flow-node .t{font-size:11.5px; font-weight:600; color:var(--cream);}
+  .flow-node .s{font-family:'IBM Plex Mono',monospace; font-size:10.5px; color:rgba(247,243,233,0.5); margin-top:2px;}
+  .flow-arrow{flex:0 0 auto; width:26px; height:1px; background:rgba(247,243,233,0.28); position:relative; margin:0 6px;}
+  .flow-arrow::after{content:''; position:absolute; right:-1px; top:-3px; border:4px solid transparent; border-left-color:rgba(247,243,233,0.5);}
+  .flow-branches{display:flex; gap:10px; margin-top:16px; flex-wrap:wrap;}
+  .flow-pill{
+    background:rgba(247,243,233,0.04); border:1px solid rgba(247,243,233,0.14); border-radius:20px;
+    padding:8px 14px; display:flex; align-items:center; gap:9px; min-width:150px;
+  }
+  .flow-pill .sw{width:8px; height:8px; border-radius:50%;}
+  .flow-pill .lbl{font-size:12px; font-weight:600; flex:1;}
+  .flow-pill .cost{font-family:'IBM Plex Mono',monospace; font-size:12.5px; color:var(--amber);}
+
+  /* Tables */
+  table{width:100%; border-collapse:collapse; font-size:13px;}
+  thead th{
+    text-align:left; font-family:'IBM Plex Mono',monospace; font-size:10.5px; text-transform:uppercase; letter-spacing:.06em;
+    color:var(--ink-soft); border-bottom:1px solid var(--line); padding:8px 8px; white-space:nowrap;
+  }
+  tbody td{padding:6px 8px; border-bottom:1px solid var(--line-soft); vertical-align:middle;}
+  tbody tr:hover{background:var(--green-pale);}
+  td.num, th.num{text-align:right;}
+  td input[type=number]{min-width:70px;}
+  .tag{font-family:'IBM Plex Mono',monospace; font-size:11px; font-weight:600; padding:2px 7px; border-radius:10px; display:inline-block;}
+  .tag.fav{background:var(--green-pale); color:var(--green-deep);}
+  .tag.unfav{background:var(--red-pale); color:var(--red);}
+  .tag.neutral{background:var(--blue-pale); color:var(--blue);}
+  .rowname{font-weight:600;}
+  .rowname .unit{display:block; font-weight:400; font-size:11px; color:var(--ink-soft); font-family:'IBM Plex Mono',monospace;}
+
+  .note{
+    font-size:12px; color:var(--ink-soft); background:var(--amber-pale); border:1px solid rgba(201,138,44,0.35);
+    border-radius:3px; padding:8px 12px; margin-top:12px; display:flex; gap:8px;
+  }
+  .note b{color:var(--green-deep);}
+
+  .chart-wrap{position:relative; height:280px;}
+  .two-col-chart{display:grid; grid-template-columns:1.3fr 1fr; gap:20px;}
+  @media (max-width:980px){.two-col-chart{grid-template-columns:1fr;}}
+
+  .formula{
+    font-family:'IBM Plex Mono',monospace; font-size:12px; background:var(--cream); border:1px dashed var(--line);
+    border-radius:3px; padding:8px 12px; margin-bottom:12px; color:var(--ink-soft);
+  }
+  .formula b{color:var(--ink);}
+
+  .result-strip{display:flex; gap:14px; flex-wrap:wrap; margin-top:14px;}
+  .result-chip{
+    background:var(--green-pale); border:1px solid rgba(47,107,79,0.25); border-radius:4px; padding:10px 14px; flex:1; min-width:150px;
+  }
+  .result-chip .k{font-size:10.5px; text-transform:uppercase; letter-spacing:.06em; color:var(--green-deep); font-family:'IBM Plex Mono',monospace;}
+  .result-chip .v{font-family:'Space Grotesk',sans-serif; font-weight:700; font-size:19px; margin-top:3px; color:var(--ink);}
+  .result-chip.warn{background:var(--red-pale); border-color:rgba(176,57,47,0.3);}
+  .result-chip.warn .k{color:var(--red);}
+  .result-chip.info{background:var(--blue-pale); border-color:rgba(58,110,143,0.3);}
+  .result-chip.info .k{color:var(--blue);}
+
+  .addrow-btn{
+    background:none; border:1px dashed var(--line); color:var(--green-deep); font-size:12px; font-weight:600;
+    padding:6px 12px; border-radius:3px; margin-top:8px;
+  }
+  .addrow-btn:hover{border-color:var(--green);}
+
+  .subgrid{display:grid; grid-template-columns:repeat(2,1fr); gap:0 20px;}
+  .field{margin-bottom:10px;}
+  .field label{display:block; font-size:11.5px; color:var(--ink-soft); margin-bottom:4px; font-family:'IBM Plex Mono',monospace;}
+
+  select{-webkit-appearance:none; appearance:none; padding:6px 8px;}
+
+  /* Print (Board Report) */
+  #printReport{display:none;}
+  @media print{
+    body *{visibility:hidden;}
+    #printReport, #printReport *{visibility:visible;}
+    #printReport{display:block; position:absolute; left:0; top:0; width:100%; padding:20px; color:#000;}
+    #printReport table{width:100%; border-collapse:collapse;}
+    #printReport th,#printReport td{border-bottom:1px solid #ccc; padding:4px 6px; font-size:11px;}
+  }
+
+  ::-webkit-scrollbar{height:8px; width:8px;}
+  ::-webkit-scrollbar-thumb{background:rgba(20,32,26,0.2); border-radius:4px;}
+
+  @media (max-width: 860px){
+    .shell{flex-direction:column;}
+    .rail{position:relative; width:100%; flex:none; height:auto;}
+    .rail-nav{display:flex; flex-wrap:wrap; gap:4px;}
+    .grp-label{display:none;}
+    .panels{padding:20px 16px 40px 16px;}
+  }
+</style>
+</head>
+<body>
+
+<div class="shell">
+  <!-- ============ SIDE NAV ============ -->
+  <aside class="rail">
+    <div class="rail-brand">
+      <div class="mark">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none"><path d="M9 2h6v3.2c0 .9.3 1.8.9 2.5l1.6 1.9c.6.7.9 1.6.9 2.5V20a2 2 0 0 1-2 2H7.6a2 2 0 0 1-2-2V12.1c0-.9.3-1.8.9-2.5l1.6-1.9c.6-.7.9-1.6.9-2.5V2Z" stroke="#F7F3E9" stroke-width="1.4" stroke-linejoin="round"/><path d="M6 15h12" stroke="#C98A2C" stroke-width="1.4"/></svg>
+        <span class="name">Milkline</span>
+      </div>
+      <div class="tag">COST INTELLIGENCE SUITE</div>
+    </div>
+    <nav class="rail-nav" id="navList">
+      <div class="grp-label">Plant Overview</div>
+      <button class="navbtn active" data-tab="overview"><span class="n">01</span>Executive Dashboard</button>
+      <div class="grp-label">Costing Engine</div>
+      <button class="navbtn" data-tab="product"><span class="n">02</span>Multi-Product Costing</button>
+      <button class="navbtn" data-tab="variance"><span class="n">03</span>Standard Cost Variance</button>
+      <button class="navbtn" data-tab="yield"><span class="n">04</span>Milk Intake &amp; Yield</button>
+      <button class="navbtn" data-tab="overhead"><span class="n">05</span>Overhead Absorption</button>
+      <div class="grp-label">Control &amp; Reporting</div>
+      <button class="navbtn" data-tab="inventory"><span class="n">06</span>Inventory Valuation</button>
+      <button class="navbtn" data-tab="cvp"><span class="n">07</span>Break-Even / CVP</button>
+      <button class="navbtn" data-tab="budget"><span class="n">08</span>Budget vs Actual</button>
+    </nav>
+    <div class="rail-foot">
+      Prepared as a working demonstration of<br>cost-accounting method for a dairy &amp;<br>beverage manufacturing plant, Kenya.
+    </div>
+  </aside>
+
+  <!-- ============ MAIN ============ -->
+  <main class="main">
+    <div class="topbar">
+      <div class="ttl">
+        <h1 id="pageTitle">Executive Dashboard</h1>
+        <p id="pageSub">Live cost position across the plant's seven product lines</p>
+      </div>
+      <div class="actions">
+        <button class="btn" id="resetBtn">Reset to defaults</button>
+        <button class="btn primary" id="reportBtn">Generate Board Report</button>
+      </div>
+    </div>
+
+    <div class="panels">
+
+      <!-- ================= 01 OVERVIEW ================= -->
+      <section class="panel active" id="panel-overview">
+        <div class="flowcard">
+          <div class="flowlabel">Process cost flow &mdash; intake to product line (live)</div>
+          <div class="flow">
+            <div class="flow-node"><div class="t">Raw Milk Intake</div><div class="s">Reception &amp; testing</div></div>
+            <div class="flow-arrow"></div>
+            <div class="flow-node"><div class="t">Pasteurising &amp; Standardising</div><div class="s">Cost centre 100</div></div>
+            <div class="flow-arrow"></div>
+            <div class="flow-node"><div class="t">Filling &amp; Packing Lines</div><div class="s">Cost centre 200&ndash;700</div></div>
+          </div>
+          <div class="flow-branches" id="flowBranches"></div>
+        </div>
+
+        <div class="grid cols-4" id="kpiRow"></div>
+
+        <div class="two-col-chart" style="margin-top:20px;">
+          <div class="card">
+            <h3><span class="dot"></span>Unit cost vs. selling price by product line</h3>
+            <div class="chart-wrap"><canvas id="chartOverviewCost"></canvas></div>
+          </div>
+          <div class="card">
+            <h3><span class="dot" style="background:var(--amber)"></span>Contribution share by product</h3>
+            <div class="chart-wrap"><canvas id="chartOverviewShare"></canvas></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3><span class="dot" style="background:var(--blue)"></span>Where the numbers come from</h3>
+          <p style="margin:0 0 8px 0; color:var(--ink-soft); font-size:13px;">This dashboard is driven entirely by the eight modules in the left rail. Change any input &mdash; a raw milk price, a labour rate, a budget line &mdash; and the executive view recalculates immediately. That is the core discipline of cost accounting for a multi-product plant like this one: one accurate, current cost base feeding every decision, from shelf pricing to board reporting.</p>
+        </div>
+      </section>
+
+      <!-- ================= 02 PRODUCT COSTING ================= -->
+      <section class="panel" id="panel-product">
+        <div class="section-head">
+          <span class="eyebrow">Module 02</span>
+          <h2>Multi-Product Unit Costing</h2>
+          <p>Full absorption unit cost, selling price and contribution across every SKU family the plant runs &mdash; from fresh milk to Pepsi bottling. Every white cell is editable.</p>
+        </div>
+        <div class="card">
+          <table id="productTable">
+            <thead>
+              <tr>
+                <th>Product line</th>
+                <th class="num">Raw material</th>
+                <th class="num">Packaging</th>
+                <th class="num">Direct labour</th>
+                <th class="num">Variable O/H</th>
+                <th class="num">Fixed O/H alloc.</th>
+                <th class="num">Unit cost</th>
+                <th class="num">Selling price</th>
+                <th class="num">Margin</th>
+                <th class="num">Margin %</th>
+                <th class="num">Monthly volume</th>
+                <th class="num">Monthly contribution</th>
+              </tr>
+            </thead>
+            <tbody id="productBody"></tbody>
+            <tfoot>
+              <tr style="font-weight:700; border-top:2px solid var(--ink);">
+                <td colspan="10" style="padding-top:10px;">Plant total</td>
+                <td class="num mono" id="ptTotalVol" style="padding-top:10px;"></td>
+                <td class="num mono" id="ptTotalContrib" style="padding-top:10px;"></td>
+              </tr>
+            </tfoot>
+          </table>
+          <div class="note"><b>Note &mdash;</b>&nbsp;all figures in KES, illustrative starting values. Overwrite with your plant's actual cost sheet to make this a live production tool.</div>
+        </div>
+      </section>
+
+      <!-- ================= 03 VARIANCE ================= -->
+      <section class="panel" id="panel-variance">
+        <div class="section-head">
+          <span class="eyebrow">Module 03</span>
+          <h2>Standard Costing &amp; Variance Analysis</h2>
+          <p>Classic material and labour variances, computed the way a monthly cost report needs them &mdash; split into price/rate and usage/efficiency, tagged favourable or adverse.</p>
+        </div>
+
+        <div class="grid cols-2">
+          <div class="card">
+            <h3><span class="dot"></span>Direct material variance &mdash; raw milk</h3>
+            <div class="subgrid">
+              <div class="field"><label>Standard quantity (litres)</label><input type="number" id="matStdQty" value="100000"></div>
+              <div class="field"><label>Standard price (KES/litre)</label><input type="number" id="matStdPrice" value="48"></div>
+              <div class="field"><label>Actual quantity (litres)</label><input type="number" id="matActQty" value="103500"></div>
+              <div class="field"><label>Actual price (KES/litre)</label><input type="number" id="matActPrice" value="50.5"></div>
+            </div>
+            <div class="formula">MPV = (Std Price &minus; Act Price) &times; Act Qty &nbsp;|&nbsp; MUV = (Std Qty &minus; Act Qty) &times; Std Price</div>
+            <div class="result-strip" id="matVarianceResult"></div>
+          </div>
+
+          <div class="card">
+            <h3><span class="dot" style="background:var(--amber)"></span>Direct labour variance &mdash; processing &amp; packing</h3>
+            <div class="subgrid">
+              <div class="field"><label>Standard hours</label><input type="number" id="labStdHrs" value="4200"></div>
+              <div class="field"><label>Standard rate (KES/hr)</label><input type="number" id="labStdRate" value="310"></div>
+              <div class="field"><label>Actual hours</label><input type="number" id="labActHrs" value="4460"></div>
+              <div class="field"><label>Actual rate (KES/hr)</label><input type="number" id="labActRate" value="322"></div>
+            </div>
+            <div class="formula">LRV = (Std Rate &minus; Act Rate) &times; Act Hrs &nbsp;|&nbsp; LEV = (Std Hrs &minus; Act Hrs) &times; Std Rate</div>
+            <div class="result-strip" id="labVarianceResult"></div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3><span class="dot" style="background:var(--blue)"></span>Combined variance summary</h3>
+          <div class="chart-wrap" style="height:220px;"><canvas id="chartVariance"></canvas></div>
+        </div>
+      </section>
+
+      <!-- ================= 04 YIELD ================= -->
+      <section class="panel" id="panel-yield">
+        <div class="section-head">
+          <span class="eyebrow">Module 04</span>
+          <h2>Milk Intake &amp; Product Yield Converter</h2>
+          <p>Dairy costing lives or dies on conversion efficiency &mdash; how many litres of raw milk it really takes to produce a kilogram of butter or a litre of yoghurt. Adjust the intake and the conversion ratios to match your plant's actual yield trials.</p>
+        </div>
+
+        <div class="grid cols-2">
+          <div class="card">
+            <h3><span class="dot"></span>Daily raw milk intake</h3>
+            <div class="subgrid">
+              <div class="field"><label>Intake volume (litres/day)</label><input type="number" id="yIntake" value="42000"></div>
+              <div class="field"><label>Butterfat content (%)</label><input type="number" step="0.1" id="yFat" value="3.8"></div>
+              <div class="field"><label>Cost per litre at reception (KES)</label><input type="number" step="0.1" id="yCost" value="48"></div>
+              <div class="field"><label>Reception &amp; handling loss (%)</label><input type="number" step="0.1" id="yLoss" value="1.2"></div>
+            </div>
+          </div>
+          <div class="card">
+            <h3><span class="dot" style="background:var(--amber)"></span>Conversion assumptions (editable)</h3>
+            <div class="subgrid">
+              <div class="field"><label>Litres of milk per kg butter</label><input type="number" step="0.1" id="yButterRatio" value="22.5"></div>
+              <div class="field"><label>Litres of milk per litre yoghurt</label><input type="number" step="0.01" id="yYoghurtRatio" value="1.05"></div>
+              <div class="field"><label>Litres of milk per litre packed milk</label><input type="number" step="0.01" id="yMilkRatio" value="1.02"></div>
+              <div class="field"><label>Split of intake &mdash; % to butter</label><input type="number" step="1" id="ySplitButter" value="20"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h3><span class="dot" style="background:var(--blue)"></span>Resulting daily yield &amp; input cost per unit</h3>
+          <div class="result-strip" id="yieldResult"></div>
+          <div class="note"><b>Reading this &mdash;</b>&nbsp;these ratios are standard editable assumptions, not fixed physical constants: actual butterfat recovery depends on separator efficiency, churning method and seasonal milk composition. Replace the defaults with your plant's yield-trial data for an audit-ready figure.</div>
+        </div>
+      </section>
+
+      <!-- ================= 05 OVERHEAD ================= -->
+      <section class="panel" id="panel-overhead">
+        <div class="section-head">
+          <span class="eyebrow">Module 05</span>
+          <h2>Factory Overhead Absorption</h2>
+          <p>Set a predetermined absorption rate on the basis that actually drives your overhead, then see whether the period closes over- or under-absorbed.</p>
+        </div>
+        <div class="grid cols-2">
+          <div class="card">
+            <h3><span class="dot"></span>Budgeted position (start of period)</h3>
+            <div class="field"><label>Absorption basis</label>
+              <select id="ohBasis">
+                <option value="machine">Machine hours</option>
+                <option value="labour">Labour hours</option>
+                <option value="units">Units produced</option>
+              </select>
+            </div>
+            <div class="subgrid">
+              <div class="field"><label>Budgeted factory overhead (KES)</label><input type="number" id="ohBudgetOH" value="18500000"></div>
+              <div class="field"><label>Budgeted basis quantity</label><input type="number" id="ohBudgetQty" value="26500"></div>
+            </div>
+          </div>
+          <div class="card">
+            <h3><span class="dot" style="background:var(--amber)"></span>Actual position (end of period)</h3>
+            <div class="subgrid">
+              <div class="field"><label>Actual factory overhead incurred (KES)</label><input type="number" id="ohActualOH" value="19120000"></div>
+              <div class="field"><label>Actual basis achieved</label><input type="number" id="ohActualQty" value="27100"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <h3><span class="dot" style="background:var(--blue)"></span>Absorption result</h3>
+          <div class="formula">Absorption rate = Budgeted OH &divide; Budgeted basis &nbsp;|&nbsp; Absorbed OH = Rate &times; Actual basis &nbsp;|&nbsp; Variance = Absorbed &minus; Actual incurred</div>
+          <div class="result-strip" id="ohResult"></div>
+        </div>
+      </section>
+
+      <!-- ================= 06 INVENTORY ================= -->
+      <section class="panel" id="panel-inventory">
+        <div class="section-head">
+          <span class="eyebrow">Module 06</span>
+          <h2>Inventory Valuation &mdash; FIFO vs Weighted Average</h2>
+          <p>Model how packaging and imported-input stock (PET preforms, milk powder, concentrate) values out under each costing method, and the resulting swing in cost of goods issued.</p>
+        </div>
+        <div class="card">
+          <h3><span class="dot"></span>Stock batches on hand</h3>
+          <table id="invTable">
+            <thead><tr><th>Batch / received</th><th class="num">Quantity</th><th class="num">Unit cost (KES)</th><th class="num">Batch value</th><th></th></tr></thead>
+            <tbody id="invBody"></tbody>
+          </table>
+          <button class="addrow-btn" id="invAddRow">+ Add batch</button>
+        </div>
+        <div class="card">
+          <h3><span class="dot" style="background:var(--amber)"></span>Issue to production</h3>
+          <div class="field" style="max-width:280px;"><label>Quantity to issue</label><input type="number" id="invIssueQty" value="9000"></div>
+          <div class="result-strip" id="invResult"></div>
+          <div class="note"><b>Why it matters &mdash;</b>&nbsp;in a period of rising input prices, FIFO issues the oldest (cheapest) stock first, reporting a higher gross margin than weighted average &mdash; the same physical stock, two different profit pictures.</div>
+        </div>
+      </section>
+
+      <!-- ================= 07 CVP ================= -->
+      <section class="panel" id="panel-cvp">
+        <div class="section-head">
+          <span class="eyebrow">Module 07</span>
+          <h2>Break-Even &amp; Cost-Volume-Profit</h2>
+          <p>Pick a product line to pull its costing straight from Module 02, or model a standalone scenario &mdash; a new SKU, a co-packing line, a proposed price change.</p>
+        </div>
+        <div class="card">
+          <div class="subgrid">
+            <div class="field"><label>Load product line</label>
+              <select id="cvpProduct"><option value="custom">Custom scenario</option></select>
+            </div>
+            <div class="field"><label>Monthly fixed costs (KES)</label><input type="number" id="cvpFixed" value="3200000"></div>
+            <div class="field"><label>Variable cost per unit (KES)</label><input type="number" id="cvpVar" value="14"></div>
+            <div class="field"><label>Selling price per unit (KES)</label><input type="number" id="cvpPrice" value="35"></div>
+            <div class="field"><label>Expected / budgeted monthly volume (units)</label><input type="number" id="cvpVolume" value="600000"></div>
+          </div>
+          <div class="formula">Break-even units = Fixed Costs &divide; (Price &minus; Variable Cost) &nbsp;|&nbsp; Margin of Safety = (Budgeted &minus; Break-even) &divide; Budgeted</div>
+          <div class="result-strip" id="cvpResult"></div>
+        </div>
+        <div class="card">
+          <h3><span class="dot" style="background:var(--blue)"></span>Revenue vs total cost</h3>
+          <div class="chart-wrap"><canvas id="chartCVP"></canvas></div>
+        </div>
+      </section>
+
+      <!-- ================= 08 BUDGET ================= -->
+      <section class="panel" id="panel-budget">
+        <div class="section-head">
+          <span class="eyebrow">Module 08</span>
+          <h2>Budget vs Actual &mdash; Monthly Cost Control</h2>
+          <p>The report a plant controller actually sends up the chain: cost category by cost category, variance flagged the moment it turns adverse.</p>
+        </div>
+        <div class="card">
+          <table id="budgetTable">
+            <thead><tr><th>Cost category</th><th class="num">Budget (KES)</th><th class="num">Actual (KES)</th><th class="num">Variance (KES)</th><th class="num">Variance %</th><th>Status</th></tr></thead>
+            <tbody id="budgetBody"></tbody>
+            <tfoot>
+              <tr style="font-weight:700; border-top:2px solid var(--ink);">
+                <td style="padding-top:10px;">Total</td>
+                <td class="num mono" id="budTotalBudget" style="padding-top:10px;"></td>
+                <td class="num mono" id="budTotalActual" style="padding-top:10px;"></td>
+                <td class="num mono" id="budTotalVar" style="padding-top:10px;"></td>
+                <td class="num mono" id="budTotalVarPct" style="padding-top:10px;"></td>
+                <td></td>
+              </tr>
+            </tfoot>
+          </table>
+        </div>
+        <div class="card">
+          <h3><span class="dot"></span>Budget vs actual by category</h3>
+          <div class="chart-wrap"><canvas id="chartBudget"></canvas></div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+</div>
+
+<!-- ============ PRINT REPORT (hidden, populated on demand) ============ -->
+<div id="printReport"></div>
+
+<script>
+/* =====================================================================
+   DATA MODEL
+   ===================================================================== */
+const fmt = n => 'KES ' + Number(n).toLocaleString('en-KE', {maximumFractionDigits:2, minimumFractionDigits:0});
+const fmt2 = n => Number(n).toLocaleString('en-KE', {maximumFractionDigits:2, minimumFractionDigits:2});
+const pct = n => (n>=0?'+':'') + n.toFixed(1) + '%';
+
+const DEFAULT_PRODUCTS = [
+  {id:'milk',    name:'Fresh Milk',        unit:'500ml pouch', sw:'#2F6B4F', rawMaterial:32,  packaging:3.5, labour:1.8, varOH:1.2, fixedOH:1.5, price:48,  volume:900000},
+  {id:'yoghurt', name:'Yoghurt',            unit:'500ml cup',   sw:'#C98A2C', rawMaterial:38,  packaging:6,   labour:3,   varOH:2.5, fixedOH:3,   price:90,  volume:250000},
+  {id:'butter',  name:'Butter',             unit:'250g pack',   sw:'#8A5A2B', rawMaterial:210, packaging:8,   labour:5,   varOH:4,   fixedOH:6,   price:320, volume:40000},
+  {id:'mdrink',  name:'Flavoured Milk Drink', unit:'300ml bottle', sw:'#3A6E8F', rawMaterial:18, packaging:4.5, labour:2, varOH:1.8, fixedOH:2, price:40,  volume:300000},
+  {id:'juice',   name:'Juice',              unit:'1L carton',   sw:'#B0392F', rawMaterial:45,  packaging:9,   labour:3,   varOH:2.5, fixedOH:3,   price:130, volume:150000},
+  {id:'water',   name:'Bottled Water',      unit:'500ml bottle', sw:'#5C8AA6', rawMaterial:3,  packaging:5,   labour:1,   varOH:0.8, fixedOH:1,   price:30,  volume:700000},
+  {id:'pepsi',   name:'Pepsi (bottling)',   unit:'300ml bottle', sw:'#6B2F3A', rawMaterial:12,  packaging:6,   labour:2,   varOH:1.5, fixedOH:2,   price:35,  volume:600000},
+];
+let products = JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
+
+const DEFAULT_INVENTORY = [
+  {label:'Batch A &mdash; 1 May', qty:4000, cost:118},
+  {label:'Batch B &mdash; 14 May', qty:5000, cost:124},
+  {label:'Batch C &mdash; 28 May', qty:4500, cost:131},
+  {label:'Batch D &mdash; 9 Jun', qty:3000, cost:128},
+];
+let inventory = JSON.parse(JSON.stringify(DEFAULT_INVENTORY));
+
+const DEFAULT_BUDGET = [
+  {cat:'Raw milk', budget:24000000, actual:24850000},
+  {cat:'Packaging materials', budget:9500000, actual:9120000},
+  {cat:'Direct labour', budget:6100000, actual:6410000},
+  {cat:'Utilities (power / water / steam)', budget:4200000, actual:4530000},
+  {cat:'Maintenance', budget:1800000, actual:1640000},
+  {cat:'Distribution & logistics', budget:3600000, actual:3810000},
+  {cat:'Admin overheads', budget:2100000, actual:2050000},
+];
+let budgetRows = JSON.parse(JSON.stringify(DEFAULT_BUDGET));
+
+let charts = {};
+
+/* =====================================================================
+   NAVIGATION
+   ===================================================================== */
+const titles = {
+  overview:['Executive Dashboard', "Live cost position across the plant's seven product lines"],
+  product:['Multi-Product Costing', 'Full absorption unit costing by SKU family'],
+  variance:['Standard Cost Variance', 'Material and labour variances against plan'],
+  yield:['Milk Intake & Yield', 'Raw milk conversion economics'],
+  overhead:['Overhead Absorption', 'Predetermined rate and period-end variance'],
+  inventory:['Inventory Valuation', 'FIFO vs weighted average costing'],
+  cvp:['Break-Even / CVP', 'Cost-volume-profit modelling'],
+  budget:['Budget vs Actual', 'Monthly cost control report'],
+};
+document.getElementById('navList').addEventListener('click', e=>{
+  const btn = e.target.closest('.navbtn');
+  if(!btn) return;
+  document.querySelectorAll('.navbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  const tab = btn.dataset.tab;
+  document.querySelectorAll('.panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('panel-'+tab).classList.add('active');
+  document.getElementById('pageTitle').textContent = titles[tab][0];
+  document.getElementById('pageSub').textContent = titles[tab][1];
+});
+
+/* =====================================================================
+   PRODUCT COSTING MODULE
+   ===================================================================== */
+function unitCost(p){ return p.rawMaterial + p.packaging + p.labour + p.varOH + p.fixedOH; }
+function margin(p){ return p.price - unitCost(p); }
+function marginPct(p){ const pr=p.price||1; return (margin(p)/pr)*100; }
+function contribution(p){ return margin(p) * p.volume; }
+
+function renderProductTable(){
+  const body = document.getElementById('productBody');
+  body.innerHTML = '';
+  products.forEach((p, idx)=>{
+    const uc = unitCost(p), m = margin(p), mp = marginPct(p), c = contribution(p);
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="rowname">${p.name}<span class="unit">${p.unit}</span></td>
+      <td class="num"><input type="number" step="0.1" data-idx="${idx}" data-field="rawMaterial" value="${p.rawMaterial}"></td>
+      <td class="num"><input type="number" step="0.1" data-idx="${idx}" data-field="packaging" value="${p.packaging}"></td>
+      <td class="num"><input type="number" step="0.1" data-idx="${idx}" data-field="labour" value="${p.labour}"></td>
+      <td class="num"><input type="number" step="0.1" data-idx="${idx}" data-field="varOH" value="${p.varOH}"></td>
+      <td class="num"><input type="number" step="0.1" data-idx="${idx}" data-field="fixedOH" value="${p.fixedOH}"></td>
+      <td class="num mono" style="font-weight:600;">${fmt2(uc)}</td>
+      <td class="num"><input type="number" step="0.1" data-idx="${idx}" data-field="price" value="${p.price}"></td>
+      <td class="num mono" style="color:${m>=0?'var(--green-deep)':'var(--red)'}; font-weight:600;">${fmt2(m)}</td>
+      <td class="num mono">${mp.toFixed(1)}%</td>
+      <td class="num"><input type="number" step="1000" data-idx="${idx}" data-field="volume" value="${p.volume}"></td>
+      <td class="num mono" style="font-weight:600;">${fmt(c)}</td>
+    `;
+    body.appendChild(tr);
+  });
+  const totalVol = products.reduce((s,p)=>s+Number(p.volume),0);
+  const totalContrib = products.reduce((s,p)=>s+contribution(p),0);
+  document.getElementById('ptTotalVol').textContent = totalVol.toLocaleString('en-KE');
+  document.getElementById('ptTotalContrib').textContent = fmt(totalContrib);
+}
+document.getElementById('productBody').addEventListener('input', e=>{
+  const t = e.target;
+  if(t.tagName!=='INPUT') return;
+  const idx = +t.dataset.idx, field = t.dataset.field;
+  products[idx][field] = parseFloat(t.value)||0;
+  renderProductTable();
+  renderOverview();
+  populateCVPProductSelect();
+});
+
+/* =====================================================================
+   OVERVIEW (KPIs, flow diagram, charts)
+   ===================================================================== */
+function renderOverview(){
+  // flow branches
+  const fb = document.getElementById('flowBranches');
+  fb.innerHTML = '';
+  products.forEach(p=>{
+    const uc = unitCost(p);
+    const el = document.createElement('div');
+    el.className = 'flow-pill';
+    el.innerHTML = `<span class="sw" style="background:${p.sw}"></span><span class="lbl">${p.name}</span><span class="cost mono">${fmt2(uc)}</span>`;
+    fb.appendChild(el);
+  });
+
+  // KPIs
+  const totalCost = products.reduce((s,p)=>s+unitCost(p)*p.volume,0);
+  const totalRevenue = products.reduce((s,p)=>s+p.price*p.volume,0);
+  const totalContrib = totalRevenue - totalCost;
+  const weightedMarginPct = totalRevenue? (totalContrib/totalRevenue*100):0;
+  const best = products.reduce((a,b)=> marginPct(b)>marginPct(a)?b:a);
+  const worst = products.reduce((a,b)=> marginPct(b)<marginPct(a)?b:a);
+
+  const kpis = [
+    {label:'Total monthly production cost', value:fmt(totalCost), sub:'across all 7 lines', cls:''},
+    {label:'Total monthly revenue', value:fmt(totalRevenue), sub:'at current selling prices', cls:'blue'},
+    {label:'Blended gross margin', value:weightedMarginPct.toFixed(1)+'%', sub:'volume-weighted', cls:'amber'},
+    {label:'Widest vs. tightest margin', value:best.name+' / '+worst.name, sub:marginPct(best).toFixed(1)+'% vs '+marginPct(worst).toFixed(1)+'%', cls: worst.margin<0?'red':''},
+  ];
+  const kpiRow = document.getElementById('kpiRow');
+  kpiRow.innerHTML = kpis.map(k=>`<div class="kpi ${k.cls}"><div class="label">${k.label}</div><div class="value">${k.value}</div><div class="sub">${k.sub}</div></div>`).join('');
+
+  // chart: unit cost vs price
+  const ctx1 = document.getElementById('chartOverviewCost');
+  const dataCost = products.map(p=>+unitCost(p).toFixed(2));
+  const dataPrice = products.map(p=>+p.price.toFixed(2));
+  const labels = products.map(p=>p.name);
+  if(charts.overviewCost) charts.overviewCost.destroy();
+  charts.overviewCost = new Chart(ctx1, {
+    type:'bar',
+    data:{ labels, datasets:[
+      {label:'Unit cost', data:dataCost, backgroundColor:'#B0392F99', borderRadius:2},
+      {label:'Selling price', data:dataPrice, backgroundColor:'#2F6B4F', borderRadius:2},
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom', labels:{boxWidth:10, font:{size:11}}}},
+      scales:{x:{ticks:{font:{size:10}}}, y:{ticks:{font:{size:10}}, title:{display:true, text:'KES'}}}
+    }
+  });
+
+  // chart: contribution share doughnut
+  const ctx2 = document.getElementById('chartOverviewShare');
+  const shareData = products.map(p=>Math.max(contribution(p),0));
+  if(charts.overviewShare) charts.overviewShare.destroy();
+  charts.overviewShare = new Chart(ctx2, {
+    type:'doughnut',
+    data:{ labels, datasets:[{data:shareData, backgroundColor:products.map(p=>p.sw)}]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom', labels:{boxWidth:10, font:{size:10}}}}
+    }
+  });
+}
+
+/* =====================================================================
+   VARIANCE MODULE
+   ===================================================================== */
+function chip(label, value, favUnfav){
+  const cls = favUnfav===null? '' : (favUnfav? 'tag fav':'tag unfav');
+  return `<div class="result-chip ${favUnfav===false?'warn':''}"><div class="k">${label}</div><div class="v mono">${value}</div>${favUnfav!==null?`<span class="${cls}" style="margin-top:6px; display:inline-block;">${favUnfav?'FAVOURABLE':'ADVERSE'}</span>`:''}</div>`;
+}
+function computeVariance(){
+  const sq=+document.getElementById('matStdQty').value, sp=+document.getElementById('matStdPrice').value;
+  const aq=+document.getElementById('matActQty').value, ap=+document.getElementById('matActPrice').value;
+  const mpv=(sp-ap)*aq, muv=(sq-aq)*sp, mtv=mpv+muv;
+  document.getElementById('matVarianceResult').innerHTML =
+    chip('Material Price Variance', fmt(mpv), mpv>=0) +
+    chip('Material Usage Variance', fmt(muv), muv>=0) +
+    chip('Total Material Variance', fmt(mtv), mtv>=0);
+
+  const sh=+document.getElementById('labStdHrs').value, sr=+document.getElementById('labStdRate').value;
+  const ah=+document.getElementById('labActHrs').value, ar=+document.getElementById('labActRate').value;
+  const lrv=(sr-ar)*ah, lev=(sh-ah)*sr, ltv=lrv+lev;
+  document.getElementById('labVarianceResult').innerHTML =
+    chip('Labour Rate Variance', fmt(lrv), lrv>=0) +
+    chip('Labour Efficiency Variance', fmt(lev), lev>=0) +
+    chip('Total Labour Variance', fmt(ltv), ltv>=0);
+
+  const ctx = document.getElementById('chartVariance');
+  if(charts.variance) charts.variance.destroy();
+  charts.variance = new Chart(ctx, {
+    type:'bar',
+    data:{ labels:['Material Price','Material Usage','Labour Rate','Labour Efficiency'],
+      datasets:[{ data:[mpv,muv,lrv,lev], backgroundColor:[mpv,muv,lrv,lev].map(v=>v>=0?'#2F6B4F':'#B0392F'), borderRadius:3}]},
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      plugins:{legend:{display:false}}, scales:{x:{title:{display:true,text:'KES (favourable = right of zero)'}}} }
+  });
+}
+['matStdQty','matStdPrice','matActQty','matActPrice','labStdHrs','labStdRate','labActHrs','labActRate'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', computeVariance);
+});
+
+/* =====================================================================
+   YIELD MODULE
+   ===================================================================== */
+function computeYield(){
+  const intake=+document.getElementById('yIntake').value;
+  const costPerL=+document.getElementById('yCost').value;
+  const lossPct=+document.getElementById('yLoss').value;
+  const butterRatio=+document.getElementById('yButterRatio').value;
+  const yoghurtRatio=+document.getElementById('yYoghurtRatio').value;
+  const milkRatio=+document.getElementById('yMilkRatio').value;
+  const splitButterPct=+document.getElementById('ySplitButter').value;
+
+  const usable = intake * (1 - lossPct/100);
+  const toButter = usable * (splitButterPct/100);
+  const toRest = usable - toButter;
+  const butterYieldKg = butterRatio? toButter/butterRatio : 0;
+  const yoghurtYieldL = yoghurtRatio? (toRest*0.4)/yoghurtRatio : 0;
+  const milkYieldL = milkRatio? (toRest*0.6)/milkRatio : 0;
+
+  const costPerKgButter = butterYieldKg? (toButter*costPerL)/butterYieldKg : 0;
+  const costPerLYoghurt = yoghurtYieldL? ((toRest*0.4)*costPerL)/yoghurtYieldL : 0;
+  const costPerLMilk = milkYieldL? ((toRest*0.6)*costPerL)/milkYieldL : 0;
+
+  document.getElementById('yieldResult').innerHTML =
+    chip('Usable milk after loss', usable.toLocaleString('en-KE',{maximumFractionDigits:0})+' L', null) +
+    chip('Butter yield / day', butterYieldKg.toLocaleString('en-KE',{maximumFractionDigits:0})+' kg', null) +
+    chip('Raw-milk cost per kg butter', fmt2(costPerKgButter), null) +
+    chip('Yoghurt yield / day', yoghurtYieldL.toLocaleString('en-KE',{maximumFractionDigits:0})+' L', null) +
+    chip('Raw-milk cost per L yoghurt', fmt2(costPerLYoghurt), null) +
+    chip('Raw-milk cost per L packed milk', fmt2(costPerLMilk), null);
+}
+['yIntake','yFat','yCost','yLoss','yButterRatio','yYoghurtRatio','yMilkRatio','ySplitButter'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', computeYield);
+});
+
+/* =====================================================================
+   OVERHEAD MODULE
+   ===================================================================== */
+function computeOverhead(){
+  const budgetOH=+document.getElementById('ohBudgetOH').value;
+  const budgetQty=+document.getElementById('ohBudgetQty').value;
+  const actualOH=+document.getElementById('ohActualOH').value;
+  const actualQty=+document.getElementById('ohActualQty').value;
+  const rate = budgetQty? budgetOH/budgetQty : 0;
+  const absorbed = rate*actualQty;
+  const varc = absorbed-actualOH;
+  document.getElementById('ohResult').innerHTML =
+    chip('Predetermined absorption rate', fmt2(rate)+' /basis unit', null) +
+    chip('Overhead absorbed', fmt(absorbed), null) +
+    chip(varc>=0?'Over-absorbed overhead':'Under-absorbed overhead', fmt(Math.abs(varc)), varc>=0);
+}
+['ohBasis','ohBudgetOH','ohBudgetQty','ohActualOH','ohActualQty'].forEach(id=>{
+  document.getElementById(id).addEventListener('input', computeOverhead);
+});
+
+/* =====================================================================
+   INVENTORY MODULE (FIFO vs Weighted Average)
+   ===================================================================== */
+function renderInventory(){
+  const body = document.getElementById('invBody');
+  body.innerHTML='';
+  inventory.forEach((b,idx)=>{
+    const val = b.qty*b.cost;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td><input type="text" data-idx="${idx}" data-field="label" value="${b.label}"></td>
+      <td class="num"><input type="number" data-idx="${idx}" data-field="qty" value="${b.qty}"></td>
+      <td class="num"><input type="number" step="0.1" data-idx="${idx}" data-field="cost" value="${b.cost}"></td>
+      <td class="num mono">${fmt2(val)}</td>
+      <td><button class="addrow-btn" data-del="${idx}" style="border-color:var(--red); color:var(--red);">Remove</button></td>
+    `;
+    body.appendChild(tr);
+  });
+  computeInventoryIssue();
+}
+document.getElementById('invBody').addEventListener('input', e=>{
+  const t=e.target; if(t.tagName!=='INPUT') return;
+  const idx=+t.dataset.idx, field=t.dataset.field;
+  inventory[idx][field] = field==='label'? t.value : (parseFloat(t.value)||0);
+  renderInventory();
+});
+document.getElementById('invBody').addEventListener('click', e=>{
+  const b=e.target.closest('[data-del]'); if(!b) return;
+  inventory.splice(+b.dataset.del,1);
+  renderInventory();
+});
+document.getElementById('invAddRow').addEventListener('click', ()=>{
+  inventory.push({label:'New batch', qty:2000, cost:130});
+  renderInventory();
+});
+function computeInventoryIssue(){
+  const issueQty = +document.getElementById('invIssueQty').value || 0;
+  // FIFO
+  let remaining = issueQty, fifoCost = 0, pool = JSON.parse(JSON.stringify(inventory));
+  for(const b of pool){
+    if(remaining<=0) break;
+    const take = Math.min(remaining, b.qty);
+    fifoCost += take*b.cost;
+    remaining -= take;
+  }
+  const totalQty = inventory.reduce((s,b)=>s+b.qty,0);
+  const totalVal = inventory.reduce((s,b)=>s+b.qty*b.cost,0);
+  const waRate = totalQty? totalVal/totalQty : 0;
+  const waCost = waRate*Math.min(issueQty,totalQty);
+  const fifoEndingVal = totalVal - fifoCost;
+  const waEndingVal = totalVal - waCost;
+
+  document.getElementById('invResult').innerHTML =
+    chip('Total stock on hand', totalQty.toLocaleString('en-KE')+' units / '+fmt(totalVal), null) +
+    chip('FIFO — cost of issue', fmt(fifoCost), null) +
+    chip('Weighted avg — cost of issue', fmt(waCost), null) +
+    chip('Profit impact (FIFO vs WA)', fmt(waCost-fifoCost), (waCost-fifoCost)>=0);
+}
+document.getElementById('invIssueQty').addEventListener('input', computeInventoryIssue);
+
+/* =====================================================================
+   CVP MODULE
+   ===================================================================== */
+function populateCVPProductSelect(){
+  const sel = document.getElementById('cvpProduct');
+  const current = sel.value;
+  sel.innerHTML = '<option value="custom">Custom scenario</option>' +
+    products.map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  sel.value = current && [...sel.options].some(o=>o.value===current) ? current : 'custom';
+}
+document.getElementById('cvpProduct').addEventListener('change', e=>{
+  const val = e.target.value;
+  if(val==='custom') return;
+  const p = products.find(x=>x.id===val);
+  if(!p) return;
+  document.getElementById('cvpVar').value = (p.rawMaterial+p.packaging+p.labour+p.varOH).toFixed(2);
+  document.getElementById('cvpPrice').value = p.price;
+  document.getElementById('cvpVolume').value = p.volume;
+  document.getElementById('cvpFixed').value = Math.round(p.fixedOH*p.volume);
+  computeCVP();
+});
+function computeCVP(){
+  const fixed=+document.getElementById('cvpFixed').value;
+  const varCost=+document.getElementById('cvpVar').value;
+  const price=+document.getElementById('cvpPrice').value;
+  const volume=+document.getElementById('cvpVolume').value;
+  const cm = price-varCost;
+  const beUnits = cm>0? fixed/cm : 0;
+  const beRevenue = beUnits*price;
+  const cmRatio = price? (cm/price*100):0;
+  const mos = volume? ((volume-beUnits)/volume*100):0;
+
+  document.getElementById('cvpResult').innerHTML =
+    chip('Contribution margin / unit', fmt2(cm), null) +
+    chip('Contribution margin ratio', cmRatio.toFixed(1)+'%', null) +
+    chip('Break-even volume', beUnits.toLocaleString('en-KE',{maximumFractionDigits:0})+' units', null) +
+    chip('Break-even revenue', fmt(beRevenue), null) +
+    chip('Margin of safety', mos.toFixed(1)+'%', mos>=0);
+
+  const maxUnits = Math.max(volume, beUnits)*1.3 || 100;
+  const steps = 10;
+  const labels=[], revLine=[], costLine=[];
+  for(let i=0;i<=steps;i++){
+    const u = Math.round(maxUnits/steps*i);
+    labels.push(u.toLocaleString('en-KE'));
+    revLine.push(u*price);
+    costLine.push(fixed + u*varCost);
+  }
+  const ctx = document.getElementById('chartCVP');
+  if(charts.cvp) charts.cvp.destroy();
+  charts.cvp = new Chart(ctx, {
+    type:'line',
+    data:{ labels, datasets:[
+      {label:'Total revenue', data:revLine, borderColor:'#2F6B4F', backgroundColor:'transparent', tension:0.15, pointRadius:0},
+      {label:'Total cost', data:costLine, borderColor:'#B0392F', backgroundColor:'transparent', tension:0.15, pointRadius:0},
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false,
+      plugins:{legend:{position:'bottom', labels:{boxWidth:10,font:{size:11}}}},
+      scales:{x:{title:{display:true, text:'Units / month'}, ticks:{maxTicksLimit:6, font:{size:10}}}, y:{title:{display:true, text:'KES'}, ticks:{font:{size:10}}}}
+    }
+  });
+}
+['cvpFixed','cvpVar','cvpPrice','cvpVolume'].forEach(id=>document.getElementById(id).addEventListener('input', computeCVP));
+
+/* =====================================================================
+   BUDGET MODULE
+   ===================================================================== */
+function renderBudget(){
+  const body = document.getElementById('budgetBody');
+  body.innerHTML='';
+  let tb=0, ta=0;
+  budgetRows.forEach((r,idx)=>{
+    const v = r.actual-r.budget;
+    const vp = r.budget? (v/r.budget*100):0;
+    tb+=r.budget; ta+=r.actual;
+    const tr = document.createElement('tr');
+    tr.innerHTML = `
+      <td class="rowname">${r.cat}</td>
+      <td class="num"><input type="number" data-idx="${idx}" data-field="budget" value="${r.budget}"></td>
+      <td class="num"><input type="number" data-idx="${idx}" data-field="actual" value="${r.actual}"></td>
+      <td class="num mono" style="color:${v<=0?'var(--green-deep)':'var(--red)'}">${fmt(v)}</td>
+      <td class="num mono">${pct(vp)}</td>
+      <td><span class="tag ${v<=0?'fav':'unfav'}">${v<=0?'ON BUDGET':'OVER BUDGET'}</span></td>
+    `;
+    body.appendChild(tr);
+  });
+  document.getElementById('budTotalBudget').textContent = fmt(tb);
+  document.getElementById('budTotalActual').textContent = fmt(ta);
+  const totalVar = ta-tb;
+  document.getElementById('budTotalVar').textContent = fmt(totalVar);
+  document.getElementById('budTotalVarPct').textContent = pct(tb? totalVar/tb*100:0);
+
+  const ctx = document.getElementById('chartBudget');
+  if(charts.budget) charts.budget.destroy();
+  charts.budget = new Chart(ctx, {
+    type:'bar',
+    data:{ labels: budgetRows.map(r=>r.cat), datasets:[
+      {label:'Budget', data:budgetRows.map(r=>r.budget), backgroundColor:'#3A6E8F', borderRadius:2},
+      {label:'Actual', data:budgetRows.map(r=>r.actual), backgroundColor:'#C98A2C', borderRadius:2},
+    ]},
+    options:{ responsive:true, maintainAspectRatio:false, indexAxis:'y',
+      plugins:{legend:{position:'bottom', labels:{boxWidth:10,font:{size:11}}}},
+      scales:{x:{ticks:{font:{size:10}}}, y:{ticks:{font:{size:10.5}}}}
+    }
+  });
+}
+document.getElementById('budgetBody').addEventListener('input', e=>{
+  const t=e.target; if(t.tagName!=='INPUT') return;
+  const idx=+t.dataset.idx, field=t.dataset.field;
+  budgetRows[idx][field] = parseFloat(t.value)||0;
+  renderBudget();
+});
+
+/* =====================================================================
+   BOARD REPORT (print)
+   ===================================================================== */
+document.getElementById('reportBtn').addEventListener('click', ()=>{
+  const totalCost = products.reduce((s,p)=>s+unitCost(p)*p.volume,0);
+  const totalRevenue = products.reduce((s,p)=>s+p.price*p.volume,0);
+  const totalContrib = totalRevenue-totalCost;
+  const rows = products.map(p=>`<tr><td>${p.name}</td><td>${p.unit}</td><td style="text-align:right">${fmt2(unitCost(p))}</td><td style="text-align:right">${fmt2(p.price)}</td><td style="text-align:right">${marginPct(p).toFixed(1)}%</td><td style="text-align:right">${p.volume.toLocaleString('en-KE')}</td><td style="text-align:right">${fmt(contribution(p))}</td></tr>`).join('');
+  const budRows = budgetRows.map(r=>`<tr><td>${r.cat}</td><td style="text-align:right">${fmt(r.budget)}</td><td style="text-align:right">${fmt(r.actual)}</td><td style="text-align:right">${fmt(r.actual-r.budget)}</td></tr>`).join('');
+  document.getElementById('printReport').innerHTML = `
+    <h1 style="font-family:sans-serif;">Milkline &mdash; Monthly Cost Position</h1>
+    <p style="font-family:sans-serif; color:#555;">Board summary generated ${new Date().toLocaleDateString('en-KE',{year:'numeric',month:'long',day:'numeric'})}</p>
+    <h2 style="font-family:sans-serif; font-size:15px;">Plant totals</h2>
+    <table><tr><td>Total production cost</td><td style="text-align:right">${fmt(totalCost)}</td></tr>
+    <tr><td>Total revenue</td><td style="text-align:right">${fmt(totalRevenue)}</td></tr>
+    <tr><td>Total contribution</td><td style="text-align:right">${fmt(totalContrib)}</td></tr></table>
+    <h2 style="font-family:sans-serif; font-size:15px; margin-top:18px;">Product line costing</h2>
+    <table><thead><tr><th>Product</th><th>Unit</th><th>Unit cost</th><th>Price</th><th>Margin %</th><th>Volume</th><th>Contribution</th></tr></thead><tbody>${rows}</tbody></table>
+    <h2 style="font-family:sans-serif; font-size:15px; margin-top:18px;">Budget vs actual</h2>
+    <table><thead><tr><th>Category</th><th>Budget</th><th>Actual</th><th>Variance</th></tr></thead><tbody>${budRows}</tbody></table>
+  `;
+  window.print();
+});
+
+/* =====================================================================
+   RESET
+   ===================================================================== */
+document.getElementById('resetBtn').addEventListener('click', ()=>{
+  products = JSON.parse(JSON.stringify(DEFAULT_PRODUCTS));
+  inventory = JSON.parse(JSON.stringify(DEFAULT_INVENTORY));
+  budgetRows = JSON.parse(JSON.stringify(DEFAULT_BUDGET));
+  document.getElementById('matStdQty').value=100000; document.getElementById('matStdPrice').value=48;
+  document.getElementById('matActQty').value=103500; document.getElementById('matActPrice').value=50.5;
+  document.getElementById('labStdHrs').value=4200; document.getElementById('labStdRate').value=310;
+  document.getElementById('labActHrs').value=4460; document.getElementById('labActRate').value=322;
+  document.getElementById('yIntake').value=42000; document.getElementById('yFat').value=3.8;
+  document.getElementById('yCost').value=48; document.getElementById('yLoss').value=1.2;
+  document.getElementById('yButterRatio').value=22.5; document.getElementById('yYoghurtRatio').value=1.05;
+  document.getElementById('yMilkRatio').value=1.02; document.getElementById('ySplitButter').value=20;
+  document.getElementById('ohBudgetOH').value=18500000; document.getElementById('ohBudgetQty').value=26500;
+  document.getElementById('ohActualOH').value=19120000; document.getElementById('ohActualQty').value=27100;
+  document.getElementById('invIssueQty').value=9000;
+  document.getElementById('cvpFixed').value=3200000; document.getElementById('cvpVar').value=14;
+  document.getElementById('cvpPrice').value=35; document.getElementById('cvpVolume').value=600000;
+  initAll();
+});
+
+/* =====================================================================
+   INIT
+   ===================================================================== */
+function initAll(){
+  renderProductTable();
+  renderOverview();
+  computeVariance();
+  computeYield();
+  computeOverhead();
+  renderInventory();
+  populateCVPProductSelect();
+  computeCVP();
+  renderBudget();
+}
+initAll();
+</script>
+</body>
+</html>
